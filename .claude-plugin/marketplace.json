@@ -2,7 +2,7 @@
   "name": "identity-agent-plugins",
   "owner": {
     "name": "Kyle Gruel",
-    "email" "kyle.gruel@goto.com"
+    "email": "kyle.gruel@goto.com"
   },
   "plugins": [
     {
