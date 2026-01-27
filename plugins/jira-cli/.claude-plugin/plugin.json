@@ -1,0 +1,10 @@
+{
+  "name": "jira-cli",
+  "version": "1.0.0",
+  "description": "Integrate jira-cli for Jira operations including issue management, sprints, epics, and workflows. Provides skills for creating tickets, triaging bugs, and generating reports.",
+  "author": {
+    "name": "Kyle Gruel",
+    "email": "kyle.gruel@goto.com",
+    "url": "https://github.com/kgruelgoto"
+  }
+}
