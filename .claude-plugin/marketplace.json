@@ -13,6 +13,15 @@
       "author": {
         "name": "Kyle Gruel"
       }
+    },
+    {
+      "name": "sku-query-plugin",
+      "source": "./plugins/sku-query",
+      "description": "Query SKU configurations from live fulfillment service for license attributes, entitlements, and relationships",
+      "version": "1.0.0",
+      "author": {
+        "name": "David Fortier"
+      }
     }
   ]
 }
