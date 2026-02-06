@@ -1,0 +1,10 @@
+{
+  "name": "as-ofs-tools-ticket-generator",
+  "version": "1.0.0",
+  "description": "Generate complete Java ticket implementations for as-ofs-tools from Jira requirements or user specifications.",
+  "author": {
+    "name": "Kyle Gruel",
+    "email": "kyle.gruel@goto.com",
+    "url": "https://github.com/kgruelgoto"
+  }
+}
