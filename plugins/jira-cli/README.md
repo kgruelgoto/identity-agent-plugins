@@ -12,7 +12,11 @@ This plugin enables Jira integration within Claude Code for issue management, pr
 
 Run the automated setup script:
 ```bash
+# Standard installation path
 ~/.claude/plugins/repos/jira-cli/scripts/setup.sh
+
+# Or use the plugin root variable (works in any installation)
+${CLAUDE_PLUGIN_ROOT}/jira-cli/scripts/setup.sh
 ```
 
 This script will:

@@ -8,6 +8,24 @@ allowed-tools: Bash, Read, Write, Grep, Glob
 
 Use jira-cli for Jira operations when users mention tickets, issues, or project management tasks.
 
+## Setup Detection
+
+**IMPORTANT**: Before performing any Jira operations, proactively check if jira-cli is properly configured. If not, suggest running the setup script before proceeding.
+
+```bash
+# Quietly check if setup is needed
+if ! command -v jira &> /dev/null || ! jira me &> /dev/null 2>&1; then
+    echo "Jira CLI is not set up. Would you like me to guide you through setup?"
+    echo ""
+    echo "Run this command to start automated setup:"
+    echo "  \${CLAUDE_PLUGIN_ROOT}/jira-cli/scripts/setup.sh"
+    echo ""
+    echo "This will install jira-cli (if needed), help create a Personal Access Token,"
+    echo "configure authentication, and validate the connection."
+    # Don't exit - let user decide whether to proceed with setup
+fi
+```
+
 ## Prerequisites Check
 
 Before any Jira operations, verify tool availability:
@@ -15,14 +33,14 @@ Before any Jira operations, verify tool availability:
 # Check if jira-cli exists and is configured
 if ! command -v jira &> /dev/null; then
     echo "jira-cli not installed. Run setup script:"
-    echo "~/.claude/plugins/repos/jira-cli/scripts/setup.sh"
+    echo "  \${CLAUDE_PLUGIN_ROOT}/jira-cli/scripts/setup.sh"
     exit 1
 fi
 
 # Verify authentication
 if ! jira me &> /dev/null; then
     echo "jira-cli not configured. Run setup script:"
-    echo "~/.claude/plugins/repos/jira-cli/scripts/setup.sh"
+    echo "  \${CLAUDE_PLUGIN_ROOT}/jira-cli/scripts/setup.sh"
     exit 1
 fi
 ```
