@@ -12,11 +12,19 @@ Use jira-cli for Jira operations when users mention tickets, issues, or project 
 
 Before any Jira operations, verify tool availability:
 ```bash
-# Check if jira-cli exists
-command -v jira &> /dev/null || echo "jira-cli not installed"
+# Check if jira-cli exists and is configured
+if ! command -v jira &> /dev/null; then
+    echo "jira-cli not installed. Run setup script:"
+    echo "~/.claude/plugins/repos/jira-cli/scripts/setup.sh"
+    exit 1
+fi
 
 # Verify authentication
-jira me &> /dev/null || echo "Run: jira init"
+if ! jira me &> /dev/null; then
+    echo "jira-cli not configured. Run setup script:"
+    echo "~/.claude/plugins/repos/jira-cli/scripts/setup.sh"
+    exit 1
+fi
 ```
 
 ## Core Operations
