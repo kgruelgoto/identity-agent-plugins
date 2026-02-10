@@ -22,6 +22,15 @@
       "author": {
         "name": "David Fortier"
       }
+    },
+    {
+      "name": "as-ofs-tools-ticket-generator",
+      "source": "./plugins/as-ofs-tools-ticket-generator",
+      "description": "Generate complete Java ticket implementations for as-ofs-tools from Jira requirements or user specifications.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Kyle Gruel"
+      }
     }
   ]
 }

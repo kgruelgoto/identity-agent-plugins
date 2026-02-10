@@ -8,23 +8,60 @@ This plugin enables Jira integration within Claude Code for issue management, pr
 
 ## Installation
 
-### Prerequisites
+### Quick Setup
 
-1. Install jira-cli:
-# macOS
-`brew install ankitpokhrel/jira-cli/jira-cli`
-
-# Linux
+Run the automated setup script:
 ```bash
-curl -L https://github.com/ankitpokhrel/jira-cli/releases/latest/download/jira-cli_linux_am
-d64.tar.gz | tar xz
-sudo mv jira /usr/local/bin/
+# Standard installation path
+~/.claude/plugins/repos/jira-cli/scripts/setup.sh
+
+# Or use the plugin root variable (works in any installation)
+${CLAUDE_PLUGIN_ROOT}/jira-cli/scripts/setup.sh
 ```
-2. Configure jira-cli authentication:
-`jira init`
-2. Follow prompts to set up your Jira instance URL and API token.
-3. Verify jira-cli is working:
-`jira me`
+
+This script will:
+- Check if jira-cli is installed (and guide installation if needed)
+- Walk you through creating a Personal Access Token
+- Configure jira-cli with your Jira Server instance
+- Validate the configuration
+
+### Manual Setup
+
+If you prefer manual setup:
+
+1. **Install jira-cli:**
+   ```bash
+   # macOS
+   brew install ankitpokhrel/jira-cli/jira-cli
+
+   # Linux
+   curl -L https://github.com/ankitpokhrel/jira-cli/releases/latest/download/jira-cli_linux_amd64.tar.gz | tar xz
+   sudo mv jira /usr/local/bin/
+   ```
+
+2. **Create Personal Access Token:**
+   - Navigate to your Jira profile: `https://YOUR-JIRA-SERVER/secure/ViewProfile.jspa`
+   - Click "Personal Access Tokens"
+   - Create a new token with appropriate permissions
+   - Copy the token (shown only once)
+
+3. **Configure jira-cli:**
+   ```bash
+   jira init
+   ```
+
+   When prompted:
+   - Installation type: `local`
+   - Server URL: Your Jira instance (e.g., `https://jira.company.com`)
+   - Login: Your username/email
+   - Auth type: `bearer`
+   - Token: Paste your PAT
+   - Project: Your default project key
+
+4. **Verify:**
+   ```bash
+   jira me
+   ```
 
 ### Install Plugin
 
