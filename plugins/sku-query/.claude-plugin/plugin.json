@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Query SKU configurations from live fulfillment service environment. Fetches and analyzes SKU data including license attributes, entitlements, and relationships.",
   "author": {
-    "name": "David Fortier",
-    "email": "david.fortier@goto.com"
+    "name": "Dominic Fortier",
+    "email": "dominic.fortier@goto.com"
   }
 }
