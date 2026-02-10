@@ -14,7 +14,16 @@
         "name": "Kyle Gruel"
       }
     },
-      {
+    {
+      "name": "sku-query-plugin",
+      "source": "./plugins/sku-query",
+      "description": "Query SKU configurations from live fulfillment service for license attributes, entitlements, and relationships",
+      "version": "1.0.0",
+      "author": {
+        "name": "Dominic Fortier"
+      }
+    },
+    {
       "name": "as-ofs-tools-ticket-generator",
       "source": "./plugins/as-ofs-tools-ticket-generator",
       "description": "Generate complete Java ticket implementations for as-ofs-tools from Jira requirements or user specifications.",
