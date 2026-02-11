@@ -144,6 +144,85 @@ cat /tmp/skus-data.js | \
 - Check array not null
 - Check array has items: `length > 0`
 
+## Query Pattern 11: Case-Insensitive Property Search (Node.js)
+
+**Question**: "Which SKUs have dialPlanSmsNodeProvisioned?"
+
+**Important**: Property names in SKU data may use different casing. When you're unsure of the exact casing, use the Node.js helper script:
+
+```bash
+# First, check if Node.js is available
+if command -v node >/dev/null 2>&1; then
+  # Copy helper script to /tmp
+  cp scripts/query-by-property.js /tmp/
+
+  # Run case-insensitive search
+  node /tmp/query-by-property.js /tmp/skus.js dialPlanSmsNodeProvisioned
+else
+  # Fallback to jq with known exact casing
+  cat /tmp/skus.js | sed 's/^skus = //' | \
+    jq '.[] | select(.accountEntitlements.jive.dialplansmsnodeprovisioned != null) | {skuName, description: .licenseAttributes.description, value: .accountEntitlements.jive.dialplansmsnodeprovisioned}'
+fi
+```
+
+**Pattern**:
+- Use Node.js helper when property casing is uncertain
+- Fall back to jq when Node.js is unavailable
+- Helper script searches all nesting levels automatically
+
+**Example Output**:
+```json
+{
+  "property": "dialPlanSmsNodeProvisioned",
+  "found": true,
+  "count": 12,
+  "skus": [
+    {
+      "skuName": "CCCompleteL",
+      "product": "ccaas",
+      "description": "GoTo Contact Complete",
+      "propertyPath": "accountEntitlements.jive.dialplansmsnodeprovisioned",
+      "propertyValue": true
+    }
+  ]
+}
+```
+
+## Query Pattern 12: Discover Property Locations (Node.js)
+
+**Question**: "Where does the transcriptsprovisioned property appear in the SKU structure?"
+
+```bash
+if command -v node >/dev/null 2>&1; then
+  cp scripts/find-property-paths.js /tmp/
+  node /tmp/find-property-paths.js /tmp/skus.js transcriptsprovisioned
+fi
+```
+
+**Use this when**:
+- You know a property exists but not its location
+- You want to understand all places where a property is used
+- You're exploring the data structure
+
+**Example Output**:
+```json
+{
+  "property": "transcriptsprovisioned",
+  "found": true,
+  "uniquePaths": 2,
+  "totalOccurrences": 145,
+  "paths": [
+    {
+      "path": "licenseEntitlements.g2w.transcriptsprovisioned",
+      "actualNames": ["transcriptsprovisioned"],
+      "occurrences": 89,
+      "exampleValue": true,
+      "valueType": "boolean"
+    }
+  ]
+}
+```
+
 ## Adapting Queries
 
 To adapt these patterns:
@@ -151,3 +230,4 @@ To adapt these patterns:
 2. Replace feature name: specific entitlement field
 3. Add/remove output fields in the final `{...}` object
 4. Combine conditions with `and` or `or`
+5. Use Node.js helpers for case-insensitive searches (see `helper-scripts.md`)

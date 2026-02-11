@@ -96,3 +96,26 @@ Use this skill when the user asks about:
 3. **Check multiple products** - Entitlements can be nested under product keys (jive, g2w, g2m, ccaas, etc.)
 4. **Be specific with paths** - Use full JSON paths like `.licenseEntitlements.jive.feature` vs `.accountEntitlements.jive.feature`
 5. **Validate SKU names** - Some names are similar (G2CCXU vs G2CCXU-Meeting)
+6. **Property names are case-insensitive** - When searching for properties like `dialPlanSmsNodeProvisioned`, the actual casing in the data may vary (e.g., `dialplansmsnodeprovisioned`). Use the Node.js helper scripts for automatic case-insensitive matching, or ensure exact casing when using jq.
+
+## Advanced Queries with Helper Scripts
+
+For case-insensitive property searches and deep path discovery, Node.js helper scripts are available in the `scripts/` directory. See `helper-scripts.md` for details.
+
+**Quick check for Node.js availability**:
+```bash
+if command -v node >/dev/null 2>&1; then
+  # Use helper scripts from scripts/ directory
+  node scripts/query-by-property.js /tmp/skus.js propertyName
+else
+  # Fall back to jq with exact property paths
+  cat /tmp/skus.js | sed 's/^skus = //' | jq 'query'
+fi
+```
+
+Helper scripts provide:
+- Case-insensitive property name matching
+- Deep property path discovery across all nesting levels
+- Multiple output formats (full JSON, names-only, count)
+
+For complete usage examples, refer to `helper-scripts.md`.

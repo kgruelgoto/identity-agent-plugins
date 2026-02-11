@@ -106,3 +106,25 @@ When querying entitlements, use full paths:
 # Check if entitlements exist
 (.licenseEntitlements != null and .licenseEntitlements != {})
 ```
+
+## Property Name Casing
+
+**Important**: Property names in the SKU data may appear in different casings. For example:
+- `dialPlanSmsNodeProvisioned` may appear as `dialplansmsnodeprovisioned`
+- `transcriptsProvisioned` may appear as `transcriptsprovisioned`
+
+When using **jq**, you must match the exact casing as it appears in the data:
+```bash
+# Must use exact casing
+.accountEntitlements.jive.dialplansmsnodeprovisioned
+```
+
+When using **Node.js helper scripts**, case-insensitive matching is automatic:
+```bash
+# All of these work:
+node scripts/query-by-property.js /tmp/skus.js dialPlanSmsNodeProvisioned
+node scripts/query-by-property.js /tmp/skus.js dialplansmsnodeprovisioned
+node scripts/query-by-property.js /tmp/skus.js DIALPLANSMSNODEPROVISIONED
+```
+
+**Best practice**: When the exact casing is uncertain, use the Node.js helper scripts (see `helper-scripts.md`) or use the `find-property-paths.js` script to discover the actual property names and locations first.
