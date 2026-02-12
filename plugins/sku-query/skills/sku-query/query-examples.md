@@ -2,6 +2,10 @@
 
 This file contains common query patterns for different types of SKU questions.
 
+## Fetching SKU Data
+
+Before querying, fetch fresh data using the fetch script. All queries below assume `/tmp/skus-data.js` contains the SKU data.
+
 ## Query Pattern 1: Find SKUs with Specific Entitlements
 
 **Question**: "Which G2W SKUs give transcription permission?"
@@ -15,6 +19,7 @@ cat /tmp/skus-data.js | \
 **Pattern**:
 - Filter by product: `.product == "product-name"`
 - Check license entitlement: `.licenseEntitlements.{product}.{feature} == true`
+- Entitlement property names are always lowercase (use `transcriptsprovisioned` not `transcriptsProvisioned`)
 - Select relevant fields to display
 
 ## Query Pattern 2: Find SKUs That Provide a Product
@@ -144,90 +149,57 @@ cat /tmp/skus-data.js | \
 - Check array not null
 - Check array has items: `length > 0`
 
-## Query Pattern 11: Case-Insensitive Property Search (Node.js)
+## Query Pattern 11: Case-Insensitive Entitlement Search
 
 **Question**: "Which SKUs have dialPlanSmsNodeProvisioned?"
 
-**Important**: Property names in SKU data may use different casing. When you're unsure of the exact casing, use the Node.js helper script:
+**Important**: Entitlement property names are always lowercase in the data. Use case-insensitive matching with `ascii_downcase`:
 
 ```bash
-# First, check if Node.js is available
-if command -v node >/dev/null 2>&1; then
-  # Copy helper script to /tmp
-  cp scripts/query-by-property.js /tmp/
+cat /tmp/skus-data.js | \
+  sed 's/^skus = //' | \
+  jq --arg prop "dialplansmsnodeprovisioned" '.[] | select(
+    (.licenseEntitlements // {} | to_entries[] | select(.key | ascii_downcase == $prop)) or
+    (.accountEntitlements // {} | to_entries[] | select(.key | ascii_downcase == $prop))
+  ) | {skuName, description: .licenseAttributes.description, product}'
+```
 
-  # Run case-insensitive search
-  node /tmp/query-by-property.js /tmp/skus.js dialPlanSmsNodeProvisioned
-else
-  # Fallback to jq with known exact casing
-  cat /tmp/skus.js | sed 's/^skus = //' | \
-    jq '.[] | select(.accountEntitlements.jive.dialplansmsnodeprovisioned != null) | {skuName, description: .licenseAttributes.description, value: .accountEntitlements.jive.dialplansmsnodeprovisioned}'
-fi
+For a specific product and entitlement type:
+
+```bash
+cat /tmp/skus-data.js | \
+  sed 's/^skus = //' | \
+  jq '.[] | select(.accountEntitlements.jive.dialplansmsnodeprovisioned == true) | {skuName, description: .licenseAttributes.description, value: .accountEntitlements.jive.dialplansmsnodeprovisioned}'
 ```
 
 **Pattern**:
-- Use Node.js helper when property casing is uncertain
-- Fall back to jq when Node.js is unavailable
-- Helper script searches all nesting levels automatically
+- Entitlement properties are always lowercase - normalize your search term
+- Use `to_entries[]` to iterate over all properties
+- Use `ascii_downcase` for case-insensitive comparison
 
-**Example Output**:
-```json
-{
-  "property": "dialPlanSmsNodeProvisioned",
-  "found": true,
-  "count": 12,
-  "skus": [
-    {
-      "skuName": "CCCompleteL",
-      "product": "ccaas",
-      "description": "GoTo Contact Complete",
-      "propertyPath": "accountEntitlements.jive.dialplansmsnodeprovisioned",
-      "propertyValue": true
-    }
-  ]
-}
-```
+## Query Pattern 12: Search Across Multiple Products
 
-## Query Pattern 12: Discover Property Locations (Node.js)
-
-**Question**: "Where does the transcriptsprovisioned property appear in the SKU structure?"
+**Question**: "Which SKUs have transcriptsprovisioned in any product?"
 
 ```bash
-if command -v node >/dev/null 2>&1; then
-  cp scripts/find-property-paths.js /tmp/
-  node /tmp/find-property-paths.js /tmp/skus.js transcriptsprovisioned
-fi
+cat /tmp/skus-data.js | \
+  sed 's/^skus = //' | \
+  jq '.[] | select(
+    .licenseEntitlements // {} | to_entries[] |
+    .value | type == "object" and has("transcriptsprovisioned")
+  ) | {skuName, product, description: .licenseAttributes.description}'
 ```
 
-**Use this when**:
-- You know a property exists but not its location
-- You want to understand all places where a property is used
-- You're exploring the data structure
-
-**Example Output**:
-```json
-{
-  "property": "transcriptsprovisioned",
-  "found": true,
-  "uniquePaths": 2,
-  "totalOccurrences": 145,
-  "paths": [
-    {
-      "path": "licenseEntitlements.g2w.transcriptsprovisioned",
-      "actualNames": ["transcriptsprovisioned"],
-      "occurrences": 89,
-      "exampleValue": true,
-      "valueType": "boolean"
-    }
-  ]
-}
-```
+**Pattern**:
+- Search across all products in licenseEntitlements
+- Check nested objects for specific properties
+- Handle missing fields with `// {}`
 
 ## Adapting Queries
 
 To adapt these patterns:
 1. Replace product name: `jive`, `g2w`, `g2m`, `ccaas`, etc.
-2. Replace feature name: specific entitlement field
+2. Replace feature name: specific entitlement field (always lowercase for licenseEntitlements/accountEntitlements)
 3. Add/remove output fields in the final `{...}` object
 4. Combine conditions with `and` or `or`
-5. Use Node.js helpers for case-insensitive searches (see `helper-scripts.md`)
+5. For case-insensitive entitlement searches, normalize to lowercase with `ascii_downcase`

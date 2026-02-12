@@ -109,22 +109,25 @@ When querying entitlements, use full paths:
 
 ## Property Name Casing
 
-**Important**: Property names in the SKU data may appear in different casings. For example:
-- `dialPlanSmsNodeProvisioned` may appear as `dialplansmsnodeprovisioned`
-- `transcriptsProvisioned` may appear as `transcriptsprovisioned`
+**Important**: Property names have different casing rules depending on their location:
 
-When using **jq**, you must match the exact casing as it appears in the data:
+### licenseEntitlements and accountEntitlements
+Property names are **always lowercase** in the data:
+- `dialPlanSmsNodeProvisioned` → `dialplansmsnodeprovisioned`
+- `transcriptsProvisioned` → `transcriptsprovisioned`
+
+When querying, either:
+1. Use lowercase directly: `.accountEntitlements.jive.dialplansmsnodeprovisioned`
+2. Use case-insensitive matching with jq:
 ```bash
-# Must use exact casing
-.accountEntitlements.jive.dialplansmsnodeprovisioned
+jq --arg prop "dialplansmsnodeprovisioned" '.[] | select(
+  .accountEntitlements.jive | to_entries[] | select(.key | ascii_downcase == $prop)
+)'
 ```
 
-When using **Node.js helper scripts**, case-insensitive matching is automatic:
-```bash
-# All of these work:
-node scripts/query-by-property.js /tmp/skus.js dialPlanSmsNodeProvisioned
-node scripts/query-by-property.js /tmp/skus.js dialplansmsnodeprovisioned
-node scripts/query-by-property.js /tmp/skus.js DIALPLANSMSNODEPROVISIONED
-```
+### licenseAttributes
+Property names are **case-sensitive** and must match exactly:
+- `.licenseAttributes.description`
+- `.licenseAttributes.devicesAllowed`
 
-**Best practice**: When the exact casing is uncertain, use the Node.js helper scripts (see `helper-scripts.md`) or use the `find-property-paths.js` script to discover the actual property names and locations first.
+**Best practice**: For entitlements, always normalize property names to lowercase. For licenseAttributes, use exact casing.

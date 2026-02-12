@@ -19,7 +19,7 @@ This skill fetches and queries SKU data from https://iamdocs.serversdev.getgo.co
 
 ## Prerequisites
 
-**Permission Required**: The skill needs permission to run `curl https://iamdocs.serversdev.getgo.com/*`
+**Permission Required**: The skill needs permission to fetch SKU data from the fulfillment service.
 
 This permission must be configured in the project's `.claude/settings.local.json`:
 ```json
@@ -27,32 +27,28 @@ This permission must be configured in the project's `.claude/settings.local.json
   "allowedPrompts": [
     {
       "tool": "Bash",
-      "prompt": "curl https://iamdocs.serversdev.getgo.com/*"
+      "prompt": "fetch SKU data"
     }
   ]
 }
 ```
 
-## Data Source
-
-The skill fetches data from:
-1. `https://iamdocs.serversdev.getgo.com/fs/live/skus-manifest.json` - to get the current data file name
-2. `https://iamdocs.serversdev.getgo.com/fs/live/[manifest-file].js` - the actual SKU data
-
 ## Query Process
 
 ### Step 1: Fetch SKU Data
 
-```bash
-# Get the current manifest
-MANIFEST=$(curl -s https://iamdocs.serversdev.getgo.com/fs/live/skus-manifest.json)
-SKU_FILE=$(echo $MANIFEST | jq -r '.skusJs')
+Use the provided script to fetch and prepare SKU data:
 
-# Download the SKU data
-curl -s "https://iamdocs.serversdev.getgo.com/fs/live/$SKU_FILE" -o /tmp/skus-data.js
+```
+!run bash skills/sku-query/fetch-skus.sh
 ```
 
-The SKU data is a JavaScript file with format: `skus = [{...}, {...}, ...]`
+This script:
+- Fetches the manifest from `https://iamdocs.serversdev.getgo.com/fs/live/skus-manifest.json`
+- Downloads the current SKU data file
+- Saves it to `/tmp/skus-data.js` in the format: `skus = [{...}, {...}, ...]`
+- Validates the data was fetched successfully
+- Falls back to `skus.js` if the manifest file is unavailable
 
 ### Step 2: Determine Query Type
 
@@ -70,13 +66,23 @@ Extract the JSON array and query based on the pattern:
 cat /tmp/skus-data.js | sed 's/^skus = //' | jq '[your query]'
 ```
 
+### Case Sensitivity in Queries
+
+- **licenseEntitlements and accountEntitlements**: Property names are always lowercase in the data. When querying, normalize the search term using `ascii_downcase`. Example: `.licenseEntitlements.jive | to_entries[] | select(.key == "transcriptsprovisioned")`
+- **licenseAttributes**: Property names require exact case matching. Example: `.licenseAttributes.description`
+
 ## Error Handling
 
-If the data fetch fails:
-1. Check network connectivity
-2. Verify the manifest endpoint is accessible
-3. Try the fallback: `https://iamdocs.serversdev.getgo.com/fs/live/skus.js`
-4. Report the error clearly to the user
+The fetch script handles errors automatically:
+- Reports clear error messages to stderr
+- Attempts fallback to `skus.js` if manifest fetch fails
+- Validates data format before completing
+- Returns non-zero exit code on failure
+
+If fetch fails, check:
+1. Network connectivity to iamdocs.serversdev.getgo.com
+2. That the allowedPrompts permission is configured
+3. The error message from the script for specific details
 
 ## When to Use This Skill
 
@@ -96,26 +102,4 @@ Use this skill when the user asks about:
 3. **Check multiple products** - Entitlements can be nested under product keys (jive, g2w, g2m, ccaas, etc.)
 4. **Be specific with paths** - Use full JSON paths like `.licenseEntitlements.jive.feature` vs `.accountEntitlements.jive.feature`
 5. **Validate SKU names** - Some names are similar (G2CCXU vs G2CCXU-Meeting)
-6. **Property names are case-insensitive** - When searching for properties like `dialPlanSmsNodeProvisioned`, the actual casing in the data may vary (e.g., `dialplansmsnodeprovisioned`). Use the Node.js helper scripts for automatic case-insensitive matching, or ensure exact casing when using jq.
-
-## Advanced Queries with Helper Scripts
-
-For case-insensitive property searches and deep path discovery, Node.js helper scripts are available in the `scripts/` directory. See `helper-scripts.md` for details.
-
-**Quick check for Node.js availability**:
-```bash
-if command -v node >/dev/null 2>&1; then
-  # Use helper scripts from scripts/ directory
-  node scripts/query-by-property.js /tmp/skus.js propertyName
-else
-  # Fall back to jq with exact property paths
-  cat /tmp/skus.js | sed 's/^skus = //' | jq 'query'
-fi
-```
-
-Helper scripts provide:
-- Case-insensitive property name matching
-- Deep property path discovery across all nesting levels
-- Multiple output formats (full JSON, names-only, count)
-
-For complete usage examples, refer to `helper-scripts.md`.
+6. **Case handling** - licenseEntitlements and accountEntitlements property names are always lowercase. Normalize search terms with `ascii_downcase`. licenseAttributes require exact case matching.
