@@ -2,6 +2,10 @@
 
 This file contains common query patterns for different types of SKU questions.
 
+## Fetching SKU Data
+
+Before querying, fetch fresh data using the fetch script. All queries below assume `/tmp/skus-data.js` contains the SKU data.
+
 ## Query Pattern 1: Find SKUs with Specific Entitlements
 
 **Question**: "Which G2W SKUs give transcription permission?"
@@ -15,21 +19,32 @@ cat /tmp/skus-data.js | \
 **Pattern**:
 - Filter by product: `.product == "product-name"`
 - Check license entitlement: `.licenseEntitlements.{product}.{feature} == true`
+- Entitlement property names are always lowercase (use `transcriptsprovisioned` not `transcriptsProvisioned`)
 - Select relevant fields to display
 
 ## Query Pattern 2: Find SKUs That Provide a Product
 
 **Question**: "Which SKUs provide g2c?"
 
+**Important**: Use jq script file to avoid shell escaping issues with `!=`:
+
 ```bash
-cat /tmp/skus-data.js | \
-  sed 's/^skus = //' | \
-  jq '.[] | select(.provides != null and (.provides | contains(["g2c"]))) | {skuName, description: .licenseAttributes.description, provides}'
+cat > /tmp/query.jq << 'EOF'
+.[] | select(.provides != null and (.provides | contains(["g2c"]))) | {
+  skuName,
+  product,
+  description: .licenseAttributes.description,
+  provides
+}
+EOF
+
+cat /tmp/skus-data.js | sed 's/^skus = //' | sed 's/;$//' | jq -f /tmp/query.jq
 ```
 
 **Pattern**:
 - Check provides array exists: `.provides != null`
 - Check array contains value: `(.provides | contains(["value"]))`
+- Use jq script file to avoid `!=` escaping issues
 
 ## Query Pattern 3: Find SKUs with Specific License Entitlements
 
@@ -144,10 +159,57 @@ cat /tmp/skus-data.js | \
 - Check array not null
 - Check array has items: `length > 0`
 
+## Query Pattern 11: Case-Insensitive Entitlement Search
+
+**Question**: "Which SKUs have dialPlanSmsNodeProvisioned?"
+
+**Important**: Entitlement property names are always lowercase in the data. Use case-insensitive matching with `ascii_downcase`:
+
+```bash
+cat /tmp/skus-data.js | \
+  sed 's/^skus = //' | \
+  jq --arg prop "dialplansmsnodeprovisioned" '.[] | select(
+    (.licenseEntitlements // {} | to_entries[] | select(.key | ascii_downcase == $prop)) or
+    (.accountEntitlements // {} | to_entries[] | select(.key | ascii_downcase == $prop))
+  ) | {skuName, description: .licenseAttributes.description, product}'
+```
+
+For a specific product and entitlement type:
+
+```bash
+cat /tmp/skus-data.js | \
+  sed 's/^skus = //' | \
+  jq '.[] | select(.accountEntitlements.jive.dialplansmsnodeprovisioned == true) | {skuName, description: .licenseAttributes.description, value: .accountEntitlements.jive.dialplansmsnodeprovisioned}'
+```
+
+**Pattern**:
+- Entitlement properties are always lowercase - normalize your search term
+- Use `to_entries[]` to iterate over all properties
+- Use `ascii_downcase` for case-insensitive comparison
+
+## Query Pattern 12: Search Across Multiple Products
+
+**Question**: "Which SKUs have transcriptsprovisioned in any product?"
+
+```bash
+cat /tmp/skus-data.js | \
+  sed 's/^skus = //' | \
+  jq '.[] | select(
+    .licenseEntitlements // {} | to_entries[] |
+    .value | type == "object" and has("transcriptsprovisioned")
+  ) | {skuName, product, description: .licenseAttributes.description}'
+```
+
+**Pattern**:
+- Search across all products in licenseEntitlements
+- Check nested objects for specific properties
+- Handle missing fields with `// {}`
+
 ## Adapting Queries
 
 To adapt these patterns:
 1. Replace product name: `jive`, `g2w`, `g2m`, `ccaas`, etc.
-2. Replace feature name: specific entitlement field
+2. Replace feature name: specific entitlement field (always lowercase for licenseEntitlements/accountEntitlements)
 3. Add/remove output fields in the final `{...}` object
 4. Combine conditions with `and` or `or`
+5. For case-insensitive entitlement searches, normalize to lowercase with `ascii_downcase`

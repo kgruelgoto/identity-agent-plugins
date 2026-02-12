@@ -42,8 +42,11 @@ Top-level SKU metadata:
 - `description`: Human-readable SKU name
 - `roles`: Array of roles granted
 - `devicesAllowed`: Whether devices are allowed
-- `weighted`: Whether SKU uses weighted licensing
+- `weighted`: Whether SKU uses weighted licensing (true = weighted, null/false = per-license)
 - `maxAttendees`: Max meeting attendees
+- `isUnlimitedSku`: Whether SKU has unlimited billing (true = unlimited, null/false = per-license)
+- `isAddonSku`: Whether this is an add-on SKU
+- `isChildSku`: Whether this is a child SKU
 
 ### License Entitlements (per-license)
 Features granted to each individual license holder.
@@ -64,10 +67,16 @@ Common fields by product:
 
 ### Relationships
 How SKUs depend on or provide other products:
-- `provides`: Array of products/features this SKU provides
-- `requires`: Array of products required
-- `requiresAny`: Array of arrays for "one of these" requirements
+- `provides`: Array of products/features this SKU provides (e.g., `["g2c"]` means grants access to GoTo Connect)
+- `requires`: Array of products required (e.g., `["g2c"]` means needs GoTo Connect to function)
+- `requiresAny`: Array of arrays for "one of these" requirements (e.g., `[["g2c", "g2c_legacy"]]` means needs either)
 - `childSkus`: Array of child SKU names
+
+### Billing Types
+Determine how a SKU is billed:
+- **Per-license**: `isUnlimitedSku` is null/false AND `weighted` is null/false
+- **Unlimited**: `isUnlimitedSku` is true
+- **Weighted**: `weighted` is true (none currently exist in data)
 
 ## Product Keys
 
@@ -106,3 +115,28 @@ When querying entitlements, use full paths:
 # Check if entitlements exist
 (.licenseEntitlements != null and .licenseEntitlements != {})
 ```
+
+## Property Name Casing
+
+**Important**: Property names have different casing rules depending on their location:
+
+### licenseEntitlements and accountEntitlements
+Property names are **always lowercase** in the data:
+- `dialPlanSmsNodeProvisioned` → `dialplansmsnodeprovisioned`
+- `transcriptsProvisioned` → `transcriptsprovisioned`
+
+When querying, either:
+1. Use lowercase directly: `.accountEntitlements.jive.dialplansmsnodeprovisioned`
+2. Use case-insensitive matching with jq:
+```bash
+jq --arg prop "dialplansmsnodeprovisioned" '.[] | select(
+  .accountEntitlements.jive | to_entries[] | select(.key | ascii_downcase == $prop)
+)'
+```
+
+### licenseAttributes
+Property names are **case-sensitive** and must match exactly:
+- `.licenseAttributes.description`
+- `.licenseAttributes.devicesAllowed`
+
+**Best practice**: For entitlements, always normalize property names to lowercase. For licenseAttributes, use exact casing.
