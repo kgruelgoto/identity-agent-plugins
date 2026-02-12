@@ -26,15 +26,25 @@ cat /tmp/skus-data.js | \
 
 **Question**: "Which SKUs provide g2c?"
 
+**Important**: Use jq script file to avoid shell escaping issues with `!=`:
+
 ```bash
-cat /tmp/skus-data.js | \
-  sed 's/^skus = //' | \
-  jq '.[] | select(.provides != null and (.provides | contains(["g2c"]))) | {skuName, description: .licenseAttributes.description, provides}'
+cat > /tmp/query.jq << 'EOF'
+.[] | select(.provides != null and (.provides | contains(["g2c"]))) | {
+  skuName,
+  product,
+  description: .licenseAttributes.description,
+  provides
+}
+EOF
+
+cat /tmp/skus-data.js | sed 's/^skus = //' | sed 's/;$//' | jq -f /tmp/query.jq
 ```
 
 **Pattern**:
 - Check provides array exists: `.provides != null`
 - Check array contains value: `(.provides | contains(["value"]))`
+- Use jq script file to avoid `!=` escaping issues
 
 ## Query Pattern 3: Find SKUs with Specific License Entitlements
 

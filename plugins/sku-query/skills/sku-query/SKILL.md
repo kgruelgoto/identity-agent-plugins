@@ -60,11 +60,24 @@ Based on the user's question, load the appropriate reference:
 
 ### Step 3: Execute Query
 
-Extract the JSON array and query based on the pattern:
+**Best Practice**: Use jq script files to avoid shell escaping issues with operators like `!=`:
 
 ```bash
-cat /tmp/skus-data.js | sed 's/^skus = //' | jq '[your query]'
+cat > /tmp/query.jq << 'EOF'
+.[] | select(.accountEntitlements.jive.propertyname != null) | {
+  skuName,
+  description: .licenseAttributes.description
+}
+EOF
+
+cat /tmp/skus-data.js | sed 's/^skus = //' | sed 's/;$//' | jq -f /tmp/query.jq
 ```
+
+**Pipeline Components**:
+- `cat /tmp/skus-data.js` - Read the fetched data
+- `sed 's/^skus = //'` - Strip the JavaScript variable assignment
+- `sed 's/;$//'` - Remove trailing semicolon for valid JSON
+- `jq -f /tmp/query.jq` - Execute the query from file
 
 ### Case Sensitivity in Queries
 
@@ -103,3 +116,25 @@ Use this skill when the user asks about:
 4. **Be specific with paths** - Use full JSON paths like `.licenseEntitlements.jive.feature` vs `.accountEntitlements.jive.feature`
 5. **Validate SKU names** - Some names are similar (G2CCXU vs G2CCXU-Meeting)
 6. **Case handling** - licenseEntitlements and accountEntitlements property names are always lowercase. Normalize search terms with `ascii_downcase`. licenseAttributes require exact case matching.
+
+## Query Tips
+
+### Avoid Shell Escaping Issues
+The bash `!` character and `!=` operator can cause escaping problems. **Always use jq script files** (write query to `/tmp/query.jq` then use `jq -f`) instead of inline queries for complex filters.
+
+### Common Patterns
+**Check array contains value**:
+```jq
+select(.provides != null and (.provides | contains(["g2c"])))
+```
+
+**Search across product entitlements**:
+```jq
+.licenseEntitlements | to_entries[] | .value |
+if type == "object" then to_entries[] | select(.key == "propertyname") else empty end
+```
+
+**Group and count**:
+```jq
+group_by(.product) | map({product: .[0].product, count: length})
+```
