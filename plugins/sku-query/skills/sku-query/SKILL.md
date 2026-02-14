@@ -21,17 +21,21 @@ This skill fetches and queries SKU data from https://iamdocs.serversdev.getgo.co
 
 **Permission Required**: The skill needs permission to fetch SKU data from the fulfillment service.
 
-This permission must be configured in the project's `.claude/settings.local.json`:
+The fetch script (`fetch-skus.sh`) uses `curl` internally to download data. These permissions must be configured in the project's `.claude/settings.local.json`:
 ```json
 {
-  "allowedPrompts": [
-    {
-      "tool": "Bash",
-      "prompt": "fetch SKU data"
-    }
-  ]
+  "permissions": {
+    "allow": [
+      "Bash(curl -s https://iamdocs.serversdev.getgo.com/fs/live/skus-manifest.json)",
+      "Bash(curl -s https://iamdocs.serversdev.getgo.com/fs/live/skus.*.js)"
+    ]
+  }
 }
 ```
+
+These permissions allow the fetch script to:
+- Download the SKU manifest (to determine the current data file version)
+- Download the versioned SKU data file (e.g., `skus.054dd8d0e4e7.js`)
 
 ## Query Process
 
@@ -39,8 +43,8 @@ This permission must be configured in the project's `.claude/settings.local.json
 
 Use the provided script to fetch and prepare SKU data:
 
-```
-!run bash skills/sku-query/fetch-skus.sh
+```bash
+bash skills/sku-query/fetch-skus.sh
 ```
 
 This script:
@@ -94,7 +98,7 @@ The fetch script handles errors automatically:
 
 If fetch fails, check:
 1. Network connectivity to iamdocs.serversdev.getgo.com
-2. That the allowedPrompts permission is configured
+2. That the curl permissions are configured in `.claude/settings.local.json`
 3. The error message from the script for specific details
 
 ## When to Use This Skill
