@@ -1,0 +1,22 @@
+{
+  "name": "accsvc-query",
+  "version": "1.0.0",
+  "description": "Query Account Service API for read-only operations across dev, stage, and live environments",
+  "author": "Identity Platform Team",
+  "skills": [
+    "accsvc-query"
+  ],
+  "binaries": [
+    "accsvc"
+  ],
+  "requirements": {
+    "environment_variables": [
+      "ACCSVC_CLIENT_NAME",
+      "ACCSVC_CLIENT_SECRET"
+    ],
+    "commands": [
+      "curl",
+      "jq"
+    ]
+  }
+}
