@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Account Service Query CLI Tool
+# Usage: accsvc GET <path> [--env <environment>]
+
+show_usage() {
+    cat <<EOF
+Usage: accsvc GET <path> [--env <environment>]
+
+Query Account Service API for read-only operations.
+
+Arguments:
+  GET <path>         HTTP GET request to the specified path (e.g., /v2/accounts/123)
+
+Options:
+  --env <env>        Environment to query: ed1 (default), stage, live
+  --help            Show this help message
+
+Environment Variables:
+  Default credentials (all environments):
+    ACCSVC_CLIENT_NAME      Client name for authentication
+    ACCSVC_CLIENT_SECRET    Client secret for authentication
+
+  Environment-specific credentials (optional, override defaults):
+    ACCSVC_ED1_CLIENT_NAME      Client name for ED1
+    ACCSVC_ED1_CLIENT_SECRET    Client secret for ED1
+    ACCSVC_STAGE_CLIENT_NAME    Client name for Stage
+    ACCSVC_STAGE_CLIENT_SECRET  Client secret for Stage
+    ACCSVC_LIVE_CLIENT_NAME     Client name for Live
+    ACCSVC_LIVE_CLIENT_SECRET   Client secret for Live
+
+Examples:
+  accsvc GET /v2/accounts/6472352565130037257
+  accsvc GET /v2/accounts/6472352565130037257/products/jive
+  accsvc GET /v2/users/123456789 --env stage
+  accsvc GET /v2/organizations/789 --env live
+
+Environment URLs:
+  ed1:   https://acc1ed1svc.qai.expertcity.com
+  stage: https://accstagesvc.iad.expertcity.com
+  live:  https://accsvc.iad.expertcity.com
+
+Exit Codes:
+  0 - Success
+  1 - Error (credentials missing, HTTP error, etc.)
+EOF
+}
+
+# Environment URLs
+declare -A ENV_URLS=(
+    [ed1]="https://acc1ed1svc.qai.expertcity.com"
+    [stage]="https://accstagesvc.iad.expertcity.com"
+    [live]="https://accsvc.iad.expertcity.com"
+)
+
+# Default environment
+ENVIRONMENT="ed1"
+
+# Parse arguments
+if [[ $# -eq 0 ]] || [[ "$1" == "--help" ]]; then
+    show_usage
+    exit 0
+fi
+
+# Check for GET method
+if [[ "$1" != "GET" ]]; then
+    echo "Error: Only GET method is supported" >&2
+    echo "Usage: accsvc GET <path> [--env <environment>]" >&2
+    exit 1
+fi
+
+shift
+
+# Check for path
+if [[ $# -eq 0 ]]; then
+    echo "Error: Path is required" >&2
+    echo "Usage: accsvc GET <path> [--env <environment>]" >&2
+    exit 1
+fi
+
+PATH_ARG="$1"
+shift
+
+# Parse optional --env flag
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --env)
+            if [[ $# -lt 2 ]]; then
+                echo "Error: --env requires an argument" >&2
+                exit 1
+            fi
+            ENVIRONMENT="$2"
+            shift 2
+            ;;
+        *)
+            echo "Error: Unknown option: $1" >&2
+            show_usage >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Validate environment
+if [[ ! -v ENV_URLS[$ENVIRONMENT] ]]; then
+    echo "Error: Invalid environment '$ENVIRONMENT'. Must be one of: ed1, stage, live" >&2
+    exit 1
+fi
+
+# Determine credentials based on environment
+# Check for environment-specific credentials first, fall back to generic ones
+ENV_UPPER=$(echo "$ENVIRONMENT" | tr '[:lower:]' '[:upper:]')
+CLIENT_NAME_VAR="ACCSVC_${ENV_UPPER}_CLIENT_NAME"
+CLIENT_SECRET_VAR="ACCSVC_${ENV_UPPER}_CLIENT_SECRET"
+
+# Try environment-specific credentials first
+CLIENT_NAME="${!CLIENT_NAME_VAR:-}"
+CLIENT_SECRET="${!CLIENT_SECRET_VAR:-}"
+
+# Fall back to generic credentials if env-specific not set
+if [[ -z "$CLIENT_NAME" ]]; then
+    CLIENT_NAME="${ACCSVC_CLIENT_NAME:-}"
+fi
+if [[ -z "$CLIENT_SECRET" ]]; then
+    CLIENT_SECRET="${ACCSVC_CLIENT_SECRET:-}"
+fi
+
+# Check if we have credentials
+if [[ -z "$CLIENT_NAME" ]]; then
+    echo "Error: No client name found for environment '$ENVIRONMENT'" >&2
+    echo "Set either:" >&2
+    echo "  export ${CLIENT_NAME_VAR}='your_client_name'  # Environment-specific" >&2
+    echo "  export ACCSVC_CLIENT_NAME='your_client_name'  # Default for all environments" >&2
+    exit 1
+fi
+
+if [[ -z "$CLIENT_SECRET" ]]; then
+    echo "Error: No client secret found for environment '$ENVIRONMENT'" >&2
+    echo "Set either:" >&2
+    echo "  export ${CLIENT_SECRET_VAR}='your_client_secret'  # Environment-specific" >&2
+    echo "  export ACCSVC_CLIENT_SECRET='your_client_secret'  # Default for all environments" >&2
+    exit 1
+fi
+
+# Build URL
+BASE_URL="${ENV_URLS[$ENVIRONMENT]}"
+FULL_URL="${BASE_URL}${PATH_ARG}"
+
+# Make request
+HTTP_CODE=$(curl -s -w "%{http_code}" -o /tmp/accsvc_response.$$ \
+    -H "ClientName: ${CLIENT_NAME}" \
+    -H "ClientSecret: ${CLIENT_SECRET}" \
+    -H "Accept: application/json" \
+    "${FULL_URL}")
+
+# Check HTTP status code
+if [[ "$HTTP_CODE" -ge 200 ]] && [[ "$HTTP_CODE" -lt 300 ]]; then
+    # Success - output response
+    cat /tmp/accsvc_response.$$
+    rm -f /tmp/accsvc_response.$$
+    exit 0
+else
+    # Error - show HTTP code and response
+    echo "Error: HTTP $HTTP_CODE" >&2
+    cat /tmp/accsvc_response.$$ >&2
+    rm -f /tmp/accsvc_response.$$
+
+    # Provide helpful error messages for common codes
+    case "$HTTP_CODE" in
+        401)
+            echo "" >&2
+            echo "Authentication failed. Check your credentials for '$ENVIRONMENT' environment." >&2
+            echo "Using: ${CLIENT_NAME_VAR} or ACCSVC_CLIENT_NAME" >&2
+            ;;
+        404)
+            echo "" >&2
+            echo "Resource not found. Check the path and resource ID." >&2
+            ;;
+        500|502|503)
+            echo "" >&2
+            echo "Server error. The Account Service may be experiencing issues." >&2
+            ;;
+    esac
+
+    exit 1
+fi
