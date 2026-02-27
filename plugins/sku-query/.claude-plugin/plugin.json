@@ -1,5 +1,5 @@
 {
-  "name": "sku-query",
+  "name": "sku-query-plugin",
   "version": "1.0.0",
   "description": "Query SKU configurations from live fulfillment service environment. Fetches and analyzes SKU data including license attributes, entitlements, and relationships.",
   "author": {

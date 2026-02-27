@@ -1,5 +1,5 @@
 {
-  "name": "accsvc-query",
+  "name": "accsvc-query-plugin",
   "version": "1.0.0",
   "description": "Query Account Service API for read-only operations across dev, stage, and live environments",
   "author": "Identity Platform Team",
