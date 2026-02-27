@@ -31,6 +31,15 @@
       "author": {
         "name": "Kyle Gruel"
       }
+    },
+    {
+      "name": "accsvc-query-plugin",
+      "source": "./plugins/accsvc-query",
+      "description": "Query Account Service API for read-only operations across dev, stage, and live environments",
+      "version": "1.0.0",
+      "author": {
+        "name": "Identity Platform Team"
+      }
     }
   ]
 }
